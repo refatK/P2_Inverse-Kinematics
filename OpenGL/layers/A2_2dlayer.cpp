@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+#include <QDebug>
+
 using namespace std;
 
 
@@ -140,20 +142,24 @@ void A2_2DLayer::mouse_grab(MouseInfo m){
 
         // Obstacle place / move mode
         m_selected = nullptr;
-        Obstacle2D* obstacle;
+        Obstacle2D* obstacle = nullptr;
         for(int i=0;i<m_obstacles.size();++i){
-            if(m_obstacles[i]->m_is_movable && m_obstacles[i]->is_inside(m.pos)){
+            if(m_obstacles[i]->is_inside(m.pos)){
                 obstacle = m_obstacles[i];
                 break;
             }
         }
 
-        if (m.button == 0 && obstacle){
-            Circle2D* c = new Circle2D(m_parent);
-            c->compute(m.pos, 20, 100);
-            c->m_color = QVector3D(1,0,0);
-            m_obstacles.push_back((Obstacle2D*)c);
-            m_selected = m_obstacles[m_obstacles.size()-1];
+        if (m.button == 0){
+            if (!obstacle){
+                Circle2D* c = new Circle2D(m_parent);
+                c->compute(m.pos, 20, 100);
+                c->m_color = QVector3D(1,0,0);
+                m_obstacles.push_back((Obstacle2D*)c);
+                m_selected = m_obstacles[m_obstacles.size()-1];
+            } else {
+                m_selected = obstacle;
+            }
 
         } else if (m.button == 2 && obstacle){
             for(auto it = m_obstacles.begin(); it != m_obstacles.end(); ++it){
@@ -163,13 +169,12 @@ void A2_2DLayer::mouse_grab(MouseInfo m){
                 }
             }
         }
-    } else  if(m_UIMode==4){
 
+    } else  if(m_UIMode==4){
         // Joint place / move mode
         m_selected = nullptr;
         Joint2D* selected_joint = nullptr;
         for(int i=0;i<m_joints.size();++i){
-
             if(m_joints[i]->m_is_movable && m_joints[i]->is_inside(m.pos)){
                 m_selected = m_joints[i];
                 break;
@@ -207,7 +212,6 @@ void A2_2DLayer::mouse_drag(MouseInfo m){
     }
 
 }
-
 
 
 void A2_2DLayer::mouse_release(MouseInfo m){
@@ -278,8 +282,6 @@ void A2_2DLayer::resizeGL(int w, int h){
 bool A2_2DLayer::initializeGL(){
 
     reset_view();
-
-
     return true;
 }
 

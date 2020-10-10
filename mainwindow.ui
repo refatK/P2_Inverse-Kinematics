@@ -97,7 +97,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Select and Edit Constraints</string>
+    <string>Select and Edit Obstacles</string>
+   </property>
+   <property name="toolTip">
+    <string>Select and Edit Obstacles</string>
    </property>
   </action>
   <action name="actionUse_knot_Reguralizer">

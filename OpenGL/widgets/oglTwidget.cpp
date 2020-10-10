@@ -229,7 +229,6 @@ void OGLTWidget::mouseMoveEvent(QMouseEvent *event){
         }
 
     } else {
-
         for(int i=0;i<m_layers.size();++i){
             if(!m_layers[i]->m_bHidden)
                 m_layers[i]->mouse_hover(m_mouse);
