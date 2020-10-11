@@ -36,7 +36,7 @@ public:
     virtual void mouse_release(MouseInfo m)=0;
 
 
-    virtual void resize(int w, int h){}
+    virtual void resize(int w, int h){(void)w; (void)h;}
 
     // virtual
     virtual bool initializeGL()=0;
@@ -47,7 +47,7 @@ public:
 
     // picking business
     // I dont make it virtual but returns -1 if not implemented, otherwise the number of intersections
-    virtual int pick(PickPrimitiveDataback& ppd) {return -1;}
+    virtual int pick(PickPrimitiveDataback& ppd) {(void) ppd; return -1;}
 
     virtual bool passMsg(TMessage*){return false;}
 

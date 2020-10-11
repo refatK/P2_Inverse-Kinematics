@@ -1,61 +1,61 @@
 #include "A2_2dlayer.h"
 
 #include "../elements/circle.h"
-#include "../elements/joint2D.h"
+#include "../elements/joint2d.h"
 
 #include <iostream>
-
-#include <QDebug>
 
 using namespace std;
 
 
 
 A2_2DLayer::A2_2DLayer(OGLTWidget* parent)
-    :OGLLayer(parent), m_selected(0), m_UIMode(1),
+    :OGLLayer(parent), m_UIMode(1), m_selected(0),
       m_solution(m_joints, m_links, m_obstacles)
 {
 
 }
 
- void A2_2DLayer::mouse_hover(MouseInfo m){
-
+void A2_2DLayer::mouse_hover(MouseInfo m){
+    (void)m;
 }
 
 bool A2_2DLayer::setUIMode(int m){
     m_UIMode = m;
+    return true;
 }
 
 bool A2_2DLayer::reset_view(){
     m_view.setToIdentity();
+    return true;
 }
 
 
 void A2_2DLayer::key_press(KeyboardInfo ki){
+    (void)ki;
 }
 
 
 void A2_2DLayer::key_release(KeyboardInfo ki){
+    (void)ki;
 }
 
 
 
 void A2_2DLayer::scroll(double delta){
-
-
+    (void)delta;
 }
 
 
 
 void A2_2DLayer::mouse_grab(MouseInfo m){
 
-
     if(m_UIMode==1){
 
         // Joint place / move mode
         m_selected = nullptr;
         Joint2D* selected_joint = nullptr;
-        for(int i=0;i<m_joints.size();++i){
+        for(unsigned int i=0;i<m_joints.size();++i){
             if(m_joints[i]->m_is_movable && m_joints[i]->is_inside(m.pos)){
                 selected_joint = m_joints[i];
                 break;
@@ -97,7 +97,7 @@ void A2_2DLayer::mouse_grab(MouseInfo m){
 
             Joint2D* start_joint = nullptr;
 
-            for(int i=0;i<m_joints.size();++i){
+            for(unsigned int i=0;i<m_joints.size();++i){
                 if(m_joints[i]->m_is_movable && m_joints[i]->is_inside(m.pos)){
                     start_joint = m_joints[i];
                     break;
@@ -116,7 +116,7 @@ void A2_2DLayer::mouse_grab(MouseInfo m){
         } else if (m.button == 2){
 
             Link2D* link = nullptr;
-            for(int i=0;i<m_links.size();++i){
+            for(unsigned int i=0;i<m_links.size();++i){
                 if (m_links[i]->m_is_movable && m_links[i]->is_inside(m.pos)){
                     link = m_links[i];
                     break;
@@ -143,7 +143,7 @@ void A2_2DLayer::mouse_grab(MouseInfo m){
         // Obstacle place / move mode
         m_selected = nullptr;
         Obstacle2D* obstacle = nullptr;
-        for(int i=0;i<m_obstacles.size();++i){
+        for(unsigned int i=0;i<m_obstacles.size();++i){
             if(m_obstacles[i]->is_inside(m.pos)){
                 obstacle = m_obstacles[i];
                 break;
@@ -173,8 +173,7 @@ void A2_2DLayer::mouse_grab(MouseInfo m){
     } else  if(m_UIMode==4){
         // Joint place / move mode
         m_selected = nullptr;
-        Joint2D* selected_joint = nullptr;
-        for(int i=0;i<m_joints.size();++i){
+        for(unsigned int i=0;i<m_joints.size();++i){
             if(m_joints[i]->m_is_movable && m_joints[i]->is_inside(m.pos)){
                 m_selected = m_joints[i];
                 break;
@@ -228,7 +227,7 @@ void A2_2DLayer::mouse_release(MouseInfo m){
 
         if(m_selected){
             Joint2D* end_joint = nullptr;
-            for(int i=0;i<m_joints.size();++i){
+            for(unsigned int i=0;i<m_joints.size();++i){
                 if(m_joints[i]->m_is_movable && GeometryUtils::is_inside(m.pos.x(), m.pos.y(),m_joints[i]->getBB())){
                     end_joint = m_joints[i];
                     break;
@@ -259,9 +258,8 @@ void A2_2DLayer::mouse_double_click(MouseInfo m){
 
     if(m_UIMode==1){
         // Joint locking
-
         m_selected = 0;
-        for(int i=0;i<m_joints.size();++i){
+        for(unsigned int i=0;i<m_joints.size();++i){
             if(GeometryUtils::is_inside(m.pos.x(), m.pos.y(),m_joints[i]->getBB())){
                 m_joints[i]->set_locked(!this->m_joints[i]->is_locked());
                 break;
@@ -295,11 +293,11 @@ bool A2_2DLayer::draw(){
 
 
     // render all elememnts
-    for(int i=0;i<m_joints.size();++i)
+    for(unsigned int i=0;i<m_joints.size();++i)
         m_joints[i]->draw(m_view, m_projection);
-    for(int i=0;i<m_links.size();++i)
+    for(unsigned int i=0;i<m_links.size();++i)
         m_links[i]->draw(m_view, m_projection);
-    for(int i=0;i<m_obstacles.size();++i)
+    for(unsigned int i=0;i<m_obstacles.size();++i)
         m_obstacles[i]->draw(m_view, m_projection);
 
 

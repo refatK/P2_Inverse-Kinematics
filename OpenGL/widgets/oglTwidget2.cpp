@@ -40,15 +40,8 @@ bool OGLTWidget::initShaders()
     }
 
     if(!m_sm.addProgram("points_shader", ":/OpenGL/shaders/vshaderpoints.glsl", ":/OpenGL/shaders/fshaderpoints.glsl")){
-         cout<<"Unable to load vshaderpoints fshaderpoints!"<<endl;
         bret =  false;
     }
-
-    if(!m_sm.addProgram("points_shader", ":/OpenGL/shaders/vshaderpoints.glsl", ":/OpenGL/shaders/fshaderpoints.glsl")){
-         cout<<"Unable to load vshaderpoints fshaderpoints!"<<endl;
-        bret =  false;
-    }
-
 
     return bret;
 }
@@ -82,12 +75,9 @@ void OGLTWidget::initializeGL()
 
     // GL initialization
     if(!initShaders()){
-        cout<<"Error in INitialization of shaders- "<<endl;
     }
 
-
     if(!initTextures()){
-        cout<<"Error in INitialization of textures- "<<endl;
     }
 
 
@@ -98,7 +88,7 @@ void OGLTWidget::initializeGL()
 
 void OGLTWidget::resizeGL(int w, int h)
 {
-    for(int i=0;i<m_layers.size();++i){
+    for(unsigned int i=0;i<m_layers.size();++i){
         m_layers[i]->resizeGL(w, h);
     }
 }
@@ -129,7 +119,7 @@ void OGLTWidget::paintGL()
 
 
     // render all elememnts
-    for(int i=0;i<m_layers.size();++i)
+    for(unsigned int i=0;i<m_layers.size();++i)
         m_layers[i]->draw();
 
 

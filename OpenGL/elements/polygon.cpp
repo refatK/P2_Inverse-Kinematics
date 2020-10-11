@@ -14,13 +14,12 @@ Polygon2D::Polygon2D(OGLTWidget* parent)
 
 
 void Polygon2D::mouse_grab(MouseInfo m){
-
+    (void)m;
 }
 
 
-
 void Polygon2D::mouse_drag(MouseInfo m){
-    for(int i=0;i<m_curve.size();++i){
+    for(unsigned int i=0;i<m_curve.size();++i){
         m_curve[i].position[0]+=m.pos[0]-m.pos0[0];
         m_curve[i].position[1]+=m.pos[1]-m.pos0[1];
     }
@@ -28,8 +27,7 @@ void Polygon2D::mouse_drag(MouseInfo m){
 
 
 void Polygon2D::mouse_release(MouseInfo m){
-
-
+    (void)m;
 }
 
 
@@ -157,7 +155,7 @@ bool Polygon2D::updateOGLBuffer(){
     m_lineBuf.allocate(&m_curve.front(), m_curve.size() * sizeof(VertexData));
 
     std::vector<GLushort> indices(m_curve.size());
-    for(int j=0;j<indices.size();++j){
+    for(unsigned int j=0;j<indices.size();++j){
         indices[j] = j;
     }
     m_indexlineBuf.bind();

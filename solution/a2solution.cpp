@@ -1,7 +1,7 @@
 #include "a2solution.h"
 
 #include "OpenGL/elements/link2d.h"
-#include "OpenGL/elements/Joint2D.h"
+#include "OpenGL/elements/joint2D.h"
 #include "OpenGL/elements/obstacle2d.h"
 
 #include <QDebug>
@@ -23,6 +23,10 @@ A2Solution::A2Solution(std::vector<Joint2D*>& joints, std::vector<Link2D*>& link
 
 void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 
+    // Code to silence warnings (redundant once solution is implemented)
+    (void)selected;
+    (void)mouse_pos;
+
     // Students implement solution here
 
 }
@@ -33,8 +37,8 @@ void A2Solution::test_eigen_library(){
     MatrixXd mat(5,6);
 
     // Fills in matrix
-    for(unsigned int row=0;row<mat.rows();row++){
-        for(unsigned int col=0;col<mat.cols();col++){
+    for(int row=0;row<mat.rows();row++){
+        for(int col=0;col<mat.cols();col++){
             mat(row,col) = row+col;
         }
     }

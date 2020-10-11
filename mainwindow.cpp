@@ -27,7 +27,6 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    // @TODO maybe move this somewhere else
     mode_group = new QActionGroup(this);
     mode_group->addAction(ui->actionSelect_and_Edit_Links);
     mode_group->addAction(ui->actionSelect_and_Edit_Joints);

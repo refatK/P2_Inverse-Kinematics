@@ -1,7 +1,5 @@
-#include "joint2D.h"
+#include "joint2d.h"
 #include "link2d.h"
-
-//#include "../oglTwidget.h"
 
 #include <iostream>
 
@@ -11,7 +9,7 @@ using namespace std;
 
 
 Joint2D::Joint2D(OGLTWidget* parent)
-    :Polygon2D(parent), m_bIsLocked(false), m_pos(0,0), m_pos_locked(0,0)
+    :Polygon2D(parent),  m_pos(0,0), m_bIsLocked(false), m_pos_locked(0,0)
 {
 
     m_cross = new Cross2D(parent);
@@ -120,8 +118,7 @@ void Joint2D::set_position(QVector2D pos){
 }
 
 bool Joint2D::draw(QMatrix4x4 model, QMatrix4x4 projection){
-    m_circle->draw(model, projection);
-    m_cross->draw(model, projection);
+    return m_circle->draw(model, projection) && m_cross->draw(model, projection);
 }
 
 QRect Joint2D::getBB()const{
