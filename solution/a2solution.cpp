@@ -1,7 +1,7 @@
 #include "a2solution.h"
 
 #include "OpenGL/elements/link2d.h"
-#include "OpenGL/elements/joint2D.h"
+#include "OpenGL/elements/joint2d.h"
 #include "OpenGL/elements/obstacle2d.h"
 
 #include <QDebug>
