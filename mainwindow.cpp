@@ -61,11 +61,6 @@ void MainWindow::on_actionLoad_triggered()
     QTextStream in(&file);
     QString json_data = in.readAll();
     json j = json::parse(json_data.toStdString());
-    if (!j){
-        QMessageBox::information(this, tr("Unable to parse file (bad JSON syntax)"),
-            file.errorString());
-        return;
-    }
 
     A2_2DWidget* w = ui->OpenGL;
     A2_2DLayer* l = dynamic_cast<A2_2DLayer*>(w->m_layers[0]);
