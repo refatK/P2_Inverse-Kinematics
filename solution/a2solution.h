@@ -26,6 +26,19 @@ public:
 
     static void test_eigen_library();
 
+private:
+    void doFkPass(Joint2D& joint, QVector2D mouse_pos);
+    void moveJointBy(Joint2D& joint, QVector2D translation);
+    void rotateJointBy(Joint2D& joint, QVector2D currMathVecFromParent, float theta);
+    float angleToRotate(QVector2D mathVecToJoint, QVector2D mathVecToNewPos);
+    float getMathAngle(QVector2D mathVec);
+    float radsToDegrees(float radians);
+    QVector2D qtToMathCoords(QVector2D qtVec);
+    QVector2D mathToQtCoords(QVector2D mathVec);
+    bool isRoot(Joint2D& joint);
+    int getJointIndex(Joint2D& joint);
+
+
 };
 
 #endif // A2SOLUTION_H
