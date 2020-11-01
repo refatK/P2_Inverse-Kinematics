@@ -5,7 +5,7 @@
 
 #include "../elements/drawelement2D.h"
 
-#include "../elements/joint2D.h"
+#include "../elements/joint2d.h"
 #include "../elements/obstacle2d.h"
 #include "../elements/link2d.h"
 
@@ -48,19 +48,18 @@ public:
     // load / save later as it is trickier
     // not virtual because I can add a control mechanism to see if I can load/sav crrectly
     // control wor
-    virtual bool save(QDataStream* out){return false;};
-    virtual bool load(QDataStream* out){return false;};
+    virtual bool save(QDataStream* out){(void)out; return false;};
+    virtual bool load(QDataStream* out){(void)out; return false;};
 
     QMatrix4x4 m_projection, m_view;
 
     // Visible elements
-    //std::vector<DrawElement2D*> m_elements;
 
     std::vector<Joint2D*> m_joints;
     std::vector<Link2D*> m_links;
     std::vector<Obstacle2D*> m_obstacles;
 
-    DrawElement2D* m_selected;
+    DrawElement2D* m_selected = nullptr;
 
     // this is where the students add their solution
     A2Solution m_solution;

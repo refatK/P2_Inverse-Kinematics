@@ -98,7 +98,7 @@ void OGLTWidget::keyPressEvent(QKeyEvent *event){
     }
 
     if(m_bpassdown){
-        for(int i=0;i<m_layers.size();++i){
+        for(unsigned int i=0;i<m_layers.size();++i){
             if(!m_layers[i]->m_bHidden)
                 m_layers[i]->key_press(ki);
         }
@@ -120,7 +120,7 @@ void OGLTWidget::keyReleaseEvent(QKeyEvent *event){
 
 
     if(m_bpassdown){
-        for(int i=0;i<m_layers.size();++i){
+        for(unsigned int i=0;i<m_layers.size();++i){
             if(!m_layers[i]->m_bHidden)
                 m_layers[i]->key_release(ki);
         }
@@ -132,10 +132,8 @@ void OGLTWidget::keyReleaseEvent(QKeyEvent *event){
 
 void OGLTWidget::wheelEvent(QWheelEvent *event){
     QPoint p = event->pixelDelta();
-    //cout<<"W: "<<p.x()<<" "<<p.y()<<endl;
 
-
-    for(int i=0;i<m_layers.size();++i){
+    for(unsigned int i=0;i<m_layers.size();++i){
         m_layers[i]->scroll(p.y());
     }
 
@@ -169,7 +167,7 @@ void OGLTWidget::mousePressEvent(QMouseEvent *e)
 
  //   if(e->flags)
 
-    for(int i=0;i<m_layers.size();++i){
+    for(unsigned int i=0;i<m_layers.size();++i){
         m_layers[i]->mouse_grab(m_mouse);
     }
 
@@ -187,14 +185,9 @@ void OGLTWidget::mouseReleaseEvent(QMouseEvent *e)
         m_mouse.button = 1;
     } else if(e->button()==Qt::RightButton){
         m_mouse.button = 2;
-    } else {
-
-        // TODO: the mouse button comes incorrect from e
-      //  cout<<"Unknown button!"<<endl;
     }
 
-
-    for(int i=0;i<m_layers.size();++i){
+    for(unsigned int i=0;i<m_layers.size();++i){
         if(!m_layers[i]->m_bHidden)
             m_layers[i]->mouse_release(m_mouse);
     }
@@ -217,20 +210,16 @@ void OGLTWidget::mouseMoveEvent(QMouseEvent *event){
         m_mouse.button = 1;
     } else if(event->button()==Qt::RightButton){
         m_mouse.button = 2;
-    } else {
-      // TODO: the mouse button sometiemes comes incorrect from e
-        //cout<<"Unknown button!"<<endl;
     }
 
     if(m_button_pressed){
-        for(int i=0;i<m_layers.size();++i){
+        for(unsigned int i=0;i<m_layers.size();++i){
             if(!m_layers[i]->m_bHidden)
                 m_layers[i]->mouse_drag(m_mouse);
         }
 
     } else {
-
-        for(int i=0;i<m_layers.size();++i){
+        for(unsigned int i=0;i<m_layers.size();++i){
             if(!m_layers[i]->m_bHidden)
                 m_layers[i]->mouse_hover(m_mouse);
         }
@@ -256,13 +245,10 @@ void OGLTWidget::mouseDoubleClickEvent(QMouseEvent *event){
     } else if(event->button()==Qt::RightButton){
         m_mouse.button = 2;
     } else {
-
         cout<<"Unknown button!"<<endl;
     }
 
- //   if(e->flags)
-
-    for(int i=0;i<m_layers.size();++i){
+    for(unsigned int i=0;i<m_layers.size();++i){
         m_layers[i]->mouse_double_click(m_mouse);
     }
 
@@ -290,27 +276,17 @@ bool OGLTWidget::save_frame_buffer(std::string f){
 }
 
 
-// load / save
-
 void OGLTWidget::readCurves(QDataStream* in){
-
+    (void) in;
     update();
 }
 
 void OGLTWidget::writeCurves(QDataStream* out){
-
-
-
+    (void) out;
 }
 
 
 void OGLTWidget::SendMessages(TMessage*){
-
-    for(int i=0;i<m_layers.size();++i){
-        if(!m_layers[i]->m_bHidden){
-            //m_layers[i]->mouse_grab(mouse);
-        }
-    }
 }
 
 

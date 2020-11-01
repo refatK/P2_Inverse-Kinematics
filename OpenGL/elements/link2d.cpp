@@ -1,5 +1,5 @@
 #include "link2d.h"
-#include "joint2D.h"
+#include "joint2d.h"
 #include "arrowhead2d.h"
 
 #include <cmath>
@@ -25,13 +25,11 @@ void Link2D::mouse_drag(MouseInfo m){
 }
 
 void Link2D::mouse_grab(MouseInfo m){
-
+    (void) m;
 }
 
 void Link2D::mouse_release(MouseInfo m){
-
-    // Check if
-
+    (void) m;
 }
 
 bool Link2D::is_inside(QVector2D pos)const{

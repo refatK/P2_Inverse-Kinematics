@@ -15,14 +15,14 @@ OGLLayer2D::OGLLayer2D(OGLTWidget* parent)
 
 bool OGLLayer2D::reset_view(){
     m_view.setToIdentity();
+    return true;
 }
 
 void OGLLayer2D::key_press(KeyboardInfo ki){
-
+    (void)ki;
 }
 
 void OGLLayer2D::scroll(double delta){
-  //  cout<<m_mouse_pos[0]<<" "<<m_mouse_pos[1]<<endl;
 
     double scale = 1.0 + delta * 0.01;
 
@@ -46,7 +46,7 @@ void OGLLayer2D::pick(QVector2D pos, PickPrimitiveDataback& ppd){
      ppd = GeometryUtils::prepare_pick_databack_ortho(pos[0], pos[1], -1, m_view, m_projection, rect);
 
 
-    for(int i=0;i<m_elements.size();++i){
+    for(unsigned int i=0;i<m_elements.size();++i){
         m_elements[i]->pick(ppd);
     }
 
@@ -162,16 +162,15 @@ void OGLLayer2D::mouse_release(MouseInfo m){
 }
 
 void OGLLayer2D::mouse_double_click(MouseInfo m){
-
+    (void)m;
 }
 
 void OGLLayer2D::resizeGL(int w, int h){
 
-//    m_view.setToIdentity();
     m_projection.setToIdentity();
     m_projection.ortho(0, w, h, 0, -1, 1);
 
-    for(int i=0;i<m_elements.size();++i){
+    for(unsigned int i=0;i<m_elements.size();++i){
         m_elements[i]->resize(w, h);
     }
 
@@ -193,7 +192,7 @@ bool OGLLayer2D::draw(){
 
 
     // render all elememnts
-    for(int i=0;i<m_elements.size();++i)
+    for(unsigned int i=0;i<m_elements.size();++i)
         m_elements[i]->draw(m_view, m_projection);
 
 

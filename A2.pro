@@ -32,7 +32,7 @@ SOURCES += \
     OpenGL/elements/cross.cpp \
     OpenGL/elements/drawelement.cpp \
     OpenGL/elements/drawelement2D.cpp \
-    OpenGL/elements/joint2D.cpp \
+    OpenGL/elements/joint2d.cpp \
     OpenGL/elements/link2d.cpp \
     OpenGL/elements/obstacle2d.cpp \
     OpenGL/elements/polygon.cpp \
@@ -59,7 +59,7 @@ HEADERS += \
     OpenGL/elements/cross.h \
     OpenGL/elements/drawelement.h \
     OpenGL/elements/drawelement2D.h \
-    OpenGL/elements/joint2D.h \
+    OpenGL/elements/joint2d.h \
     OpenGL/elements/link2d.h \
     OpenGL/elements/obstacle2d.h \
     OpenGL/elements/polygon.h \

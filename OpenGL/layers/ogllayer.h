@@ -58,6 +58,7 @@ public:
     int m_UIMode;
     virtual bool setUIMode(int m){
        m_UIMode = m;
+       return true;
     }
 
 

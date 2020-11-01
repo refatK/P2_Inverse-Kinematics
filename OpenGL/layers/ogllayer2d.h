@@ -21,7 +21,7 @@ public:
     virtual void mouse_double_click(MouseInfo m);
 
     virtual void key_press(KeyboardInfo ki);
-    virtual void key_release(KeyboardInfo ki){}
+    virtual void key_release(KeyboardInfo ki){(void) ki;}
 
     virtual void scroll(double delta);
 
@@ -41,8 +41,8 @@ public:
         // load / save later as it is trickier
         // not virtual because I can add a control mechanism to see if I can load/sav crrectly
         // control wor
-    virtual bool save(QDataStream* out){return false;};
-    virtual bool load(QDataStream* out){return false;};
+    virtual bool save(QDataStream* out){(void) out; return false;};
+    virtual bool load(QDataStream* out){(void) out; return false;};
 
 
     void pick(QVector2D pos, PickPrimitiveDataback& ppd);
