@@ -25,6 +25,7 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 
     // Do Forward Kinematics
     this->doFkPass(*selected, mouse_pos);
+    this->commitFk(*selected);
 }
 
 void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
@@ -32,7 +33,9 @@ void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
         // When root is chosen, we should translate it and it's children
         QVector2D change = mouse_pos - joint.get_position();
 
-        this->moveJointBy(joint, change);
+        this->doMov = true;
+        this->movToMake = change;
+//        this->moveJointBy(joint, change);
 
     } else {
         // When non-root chosen, we rotate the selected the nodes and its children
@@ -42,8 +45,25 @@ void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
         QVector2D mathVecToMouse = this->qtToMathCoords(mouse_pos - parentPos);
         float theta = this->angleToRotate(mathVecToJoint, mathVecToMouse);
 
-        this->rotateJointBy(joint, mathVecToJoint, theta);
+        this->doRot = true;
+        this->rotToMake = theta;
+//        this->rotateJointBy(joint, mathVecToJoint, theta);
     }
+}
+
+void A2Solution::commitFk(Joint2D& joint) {
+    if (this->doMov) {
+        this->moveJointBy(joint, this->movToMake);
+    }
+
+    if (this->doRot) {
+        QVector2D parentPos = joint.get_parents()[0]->get_position();
+        QVector2D mathVecToJoint = this->qtToMathCoords(joint.get_position() - parentPos);
+        this->rotateJointBy(joint, mathVecToJoint, this->rotToMake);
+    }
+
+    this->doMov = false;
+    this->doRot = false;
 }
 
 void A2Solution::moveJointBy(Joint2D& joint, QVector2D translation) {

@@ -28,6 +28,7 @@ public:
 
 private:
     void doFkPass(Joint2D& joint, QVector2D mouse_pos);
+    void commitFk(Joint2D& joint);
     void moveJointBy(Joint2D& joint, QVector2D translation);
     void rotateJointBy(Joint2D& joint, QVector2D currMathVecFromParent, float theta);
     float angleToRotate(QVector2D mathVecToJoint, QVector2D mathVecToNewPos);
@@ -38,7 +39,10 @@ private:
     bool isRoot(Joint2D& joint);
     int getJointIndex(Joint2D& joint);
 
-
+    QVector2D movToMake;
+    float rotToMake;
+    bool doMov = false;
+    bool doRot = false;
 };
 
 #endif // A2SOLUTION_H
