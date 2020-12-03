@@ -51,8 +51,8 @@ private:
     // CONSTANTS
     float epsilon = 0; // tried 0.001
     float lambda = 40; // ballpark is 5-50
-    float beta = 0.05; // idk
-    int maxIterations = 80;
+    float beta = 0.01; // idk
+    int maxIterations = 100;
     float inRangeMag = 0.1;
 
     Joint2D* m_root;
@@ -62,7 +62,7 @@ private:
     std::vector<Joint2D*> m_locked_joints;
     std::vector<QVector2D*> pos_locked_joints;
 
-    void setRoot();
+    void setRoot(Joint2D* selected);
     void setRelevantJoints(Joint2D* selected);
     bool isXRow(int rowIndex);
     bool canEffect(Joint2D& effector, Joint2D& effected);

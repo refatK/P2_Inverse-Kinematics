@@ -36,7 +36,7 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     this->pos_locked_joints.clear();
 
     // setup data
-    this->setRoot(); // TODO: currently just takes first root it sees, not based on selected
+    this->setRoot(selected);
     this->setRelevantJoints(selected);
 
     MatrixXf jacobian;
@@ -306,13 +306,14 @@ void A2Solution::setRelevantJoints(Joint2D* selected) {
     }
 }
 
-void A2Solution::setRoot() {
-    for (Joint2D* joint : this->m_joints) {
-        if (this->isRoot(*joint)) {
-            this->m_root = joint;
-            return;
-        }
+void A2Solution::setRoot(Joint2D* selected) {
+    Joint2D* current = selected;
+
+    while (!this->isRoot(*current)) {
+        current = current->get_parents()[0];
     }
+
+    this->m_root = current;
 }
 
 void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
