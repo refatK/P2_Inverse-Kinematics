@@ -30,14 +30,33 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     // clear data
     this->m_root = nullptr;
     this->m_used_joints.clear();
+    this->pos_used_joints.clear();
     this->m_locked_joints.clear();
+    this->pos_locked_joints.clear();
+
     // setup data
     this->setRoot(); // TODO: currently just takes first root it sees, not based on selected
     this->setRelevantJoints();
 
-    // TODO: scale error using a Beta factor
-    MatrixXf errorVector = this->createErrorVec(this->m_locked_joints, *selected, mouse_pos);
-    MatrixXf jacobian = this->createJacobian(this->m_used_joints, this->m_locked_joints, this->epsilon);
+    MatrixXf jacobian;
+    VectorXf errorVector;
+
+    for (int i=0; i<1; ++i) {
+//    for (int i=0; i<this->maxIterations; ++i) {
+        // get needed values
+        jacobian = this->createJacobian(this->m_used_joints, this->pos_used_joints, this->m_locked_joints, this->pos_locked_joints, this->epsilon);
+        errorVector = this->createErrorVec(this->m_locked_joints, this->pos_locked_joints, *selected, mouse_pos);
+        errorVector = this->beta * errorVector;
+
+        // do DLS
+        VectorXf deltaTheta = this->doDls(jacobian, errorVector, this->lambda);
+
+        // do FK with new angles
+    }
+
+//    MatrixXf jacobian = this->createJacobian(this->m_used_joints, this->m_locked_joints, this->epsilon);
+//    VectorXf errorVector = this->createErrorVec(this->m_locked_joints, *selected, mouse_pos);
+//    VectorXf deltaTheta = this->doDls(jacobian, errorVector, this->lambda);
 
     std::cout << "--------------------------" << std::endl;
     std::cout << errorVector << std::endl;
@@ -52,32 +71,43 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 //    this->commitFk(*selected);
 }
 
-MatrixXf A2Solution::createErrorVec(std::vector<Joint2D*>& lockedJoints, Joint2D& selected, QVector2D& expectedPos) {
+VectorXf A2Solution::doDls(MatrixXf j, VectorXf e, float lambda) {
+    MatrixXf jT = j.transpose();
+    MatrixXf i = MatrixXf::Identity(j.rows(), j.rows());
+    float lamSq = lambda*lambda;
+
+    MatrixXf dls = jT * (j*jT + lamSq*i).inverse();
+    return dls*e;
+}
+
+VectorXf A2Solution::createErrorVec(std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, Joint2D& selected, QVector2D& expectedPos) {
     int numLocked = lockedJoints.size();
     int numRows = 2 * numLocked;
 
-    MatrixXf errorVec(numRows, 1);
+    VectorXf errorVec(numRows);
 
     for (int row=0; row<numRows; row=row+2) {
-        Joint2D* current = lockedJoints[row/2];
-        Vector3f currMath = this->qtToEigenMath(current->get_position());
+        int currIndex = row/2;
+        Joint2D* current = lockedJoints[currIndex];
+        Vector3f currMath = this->qtToEigenMath(*posLockedJoints[currIndex]);
 
         if (current == &selected) {
             Vector3f expectedMath = this->qtToEigenMath(expectedPos);
             Vector3f error = expectedMath - currMath;
-            errorVec(row, 0) = error.x();
-            errorVec(row+1, 0) = error.y();
+            errorVec(row) = error.x();
+            errorVec(row+1) = error.y();
         } else {
             // TODO: need to store initial postion and current position, just 0 for now
-            errorVec(row, 0) = 0;
-            errorVec(row+1, 0) = 0;
+            // I think done now because of posVectors
+            errorVec(row) = 0;
+            errorVec(row+1) = 0;
         }
     }
 
     return errorVec;
 }
 
-MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vector<Joint2D*>& lockedJoints, float epsilon) {
+MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, float epsilon) {
     int numJoints = allJoints.size();
     int numLocked = lockedJoints.size();
 
@@ -101,7 +131,8 @@ MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vecto
         int col = i+1;
 
         for (int row=0; row<numRows; row=row+2) {
-            Joint2D* effected = lockedJoints[row/2];
+            int effectedIndex = row/2;
+            Joint2D* effected = lockedJoints[effectedIndex];
 
             // root case
             if (this->isRoot(*effected)) {
@@ -111,7 +142,8 @@ MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vecto
             }
 
             // other cases
-            Joint2D* effector = allJoints[i];
+            int effectorIndex = i;
+            Joint2D* effector = allJoints[effectedIndex];
 
             // effected not a child of effector
             if (!this->canEffect(*effector, *effected)) {
@@ -121,8 +153,8 @@ MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vecto
             }
 
             // the effector will have an effect, must handle to get values
-            Vector3f effectedMath = qtToEigenMath(effected->get_position());
-            Vector3f effectorMath = qtToEigenMath(effector->get_parents()[0]->get_position()); // we want the pos of what we are roating around
+            Vector3f effectedMath = qtToEigenMath(*posLockedJoints[effectedIndex]);
+            Vector3f effectorMath = qtToEigenMath(posAllJoints[this->getParentIndex(allJoints, effectorIndex)]); // we want the pos of what we are roating around
             Vector3f delChange = Vector3f::UnitZ().cross(effectedMath - effectorMath);
             jacobian(row, col) = delChange.x();
             jacobian(row+1, col) = delChange.y();
@@ -130,6 +162,17 @@ MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vecto
     }
 
     return jacobian;
+}
+
+int A2Solution::getParentIndex(std::vector<Joint2D*>& allJoints, int currIndex) {
+    Joint2D* curr = allJoints[currIndex];
+    Joint2D* parent = curr->get_parents()[0];
+
+    for(int i=currIndex-1; i>=0; --i) {
+        if (allJoints[i] == parent) { return i; }
+    }
+
+    return -1; // This is an error scenario
 }
 
 bool A2Solution::canEffect(Joint2D& effector, Joint2D& effected) {
@@ -157,8 +200,11 @@ bool A2Solution::isXRow(int rowIndex) {
 void A2Solution::setRelevantJoints() {
     // add root first always (assumes root is set)
     this->m_used_joints.push_back(this->m_root);
+    this->pos_used_joints.push_back(this->m_root->get_position());
+
     if (m_root->is_locked()) {
         this->m_locked_joints.push_back(this->m_root);
+        this->pos_locked_joints.push_back(&this->pos_used_joints.back());
     }
 
     Joint2D* current;
@@ -174,8 +220,11 @@ void A2Solution::setRelevantJoints() {
         }
 
         this->m_used_joints.push_back(current);
+        this->pos_used_joints.push_back(current->get_position());
+
         if (current->is_locked()) {
             this->m_locked_joints.push_back(current);
+            this->pos_locked_joints.push_back(&this->pos_used_joints.back());
         }
         queue.pop_front();
     }

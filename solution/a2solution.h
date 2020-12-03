@@ -9,6 +9,7 @@
 
 #include "dependencies/Eigen/Dense"
 using Eigen::Vector3f;
+using Eigen::VectorXf;
 using Eigen::Rotation2D;
 using Eigen::MatrixXf;
 
@@ -47,18 +48,26 @@ private:
     bool doRot = false;
 
     // CONSTANTS
-    float epsilon = 0.001;
+    float epsilon = 0; // tried 0.001
+    float lambda = 10; // ballpark is 5-50
+    float beta = 0.2; // idk
+    int maxIterations = 30;
+    float inRange = 1;
 
     Joint2D* m_root;
     std::vector<Joint2D*> m_used_joints;
+    std::vector<QVector2D> pos_used_joints;
     std::vector<Joint2D*> m_locked_joints;
+    std::vector<QVector2D*> pos_locked_joints;
 
     void setRoot();
     void setRelevantJoints();
     bool isXRow(int rowIndex);
     bool canEffect(Joint2D& effector, Joint2D& effected);
-    MatrixXf createJacobian(std::vector<Joint2D*>& allJoints, std::vector<Joint2D*>& lockedJoints, float epsilon);
-    MatrixXf createErrorVec(std::vector<Joint2D*>& lockedJoints, Joint2D& selected, QVector2D& expectedPos);
+    int getParentIndex(std::vector<Joint2D*>& allJoints, int currIndex);
+    MatrixXf createJacobian(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, float epsilon);
+    VectorXf createErrorVec(std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, Joint2D& selected, QVector2D& expectedPos);
+    VectorXf doDls(MatrixXf j, VectorXf e, float lambda);
 };
 
 #endif // A2SOLUTION_H
