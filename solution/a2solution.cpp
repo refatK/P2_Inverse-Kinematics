@@ -30,10 +30,23 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     this->setRoot(); // TODO: currently just takes first root it sees, not based on selected
     this->setRelevantJoints(); // Only looks at elements from the root
 
+    MatrixXf jacobian = this->createJacobian(this->m_used_joints, this->m_locked_joints, this->epsilon);
+
+    std::cout << "--------------------------" << std::endl;
+    std::cout << jacobian << std::endl;
+    std::cout << "--------------------------" << std::endl;
+    // ---
+
+    // Do Forward Kinematics
+//    this->doFkPass(*selected, mouse_pos);
+//    this->commitFk(*selected);
+}
+
+MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vector<Joint2D*>& lockedJoints, float epsilon) {
     // Build Jacobian
     // ---
-    int numJoints = this->m_used_joints.size();
-    int numLocked = this->m_locked_joints.size();
+    int numJoints = allJoints.size();
+    int numLocked = lockedJoints.size();
 
     int numRows = 2 * numLocked;
     int numCols = numJoints + 1; // The plus one is for the root which has 2 degrees of freedom
@@ -42,20 +55,20 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     // set root columns (first 2 columns)
     for (int i=0; i<numRows; ++i) {
         if (this->isXRow(i)) {
-            jacobian(i, 0) = this->epsilon;
+            jacobian(i, 0) = epsilon;
             jacobian(i, 1) = 0;
         } else {
             jacobian(i, 0) = 0;
-            jacobian(i, 1) = this->epsilon;
+            jacobian(i, 1) = epsilon;
         }
     }
 
-    for (int i=0; i<this->m_used_joints.size(); ++i) {
+    for (int i=0; i<allJoints.size(); ++i) {
         if (i == 0) { continue; } // skip root, its already set
         int col = i+1;
 
         for (int row=0; row<numRows; row=row+2) {
-            Joint2D* effected = m_locked_joints[row/2];
+            Joint2D* effected = lockedJoints[row/2];
 
             // root case
             if (this->isRoot(*effected)) {
@@ -65,7 +78,7 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
             }
 
             // other cases
-            Joint2D* effector = m_used_joints[i];
+            Joint2D* effector = allJoints[i];
 
             // effected not a child of effector
             if (!this->canEffect(*effector, *effected)) {
@@ -80,18 +93,10 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
             Vector3f delChange = Vector3f::UnitZ().cross(effectedMath - effectorMath);
             jacobian(row, col) = delChange.x();
             jacobian(row+1, col) = delChange.y();
-
         }
     }
 
-    std::cout << "--------------------------" << std::endl;
-    std::cout << jacobian << std::endl;
-    std::cout << "--------------------------" << std::endl;
-    // ---
-
-    // Do Forward Kinematics
-//    this->doFkPass(*selected, mouse_pos);
-//    this->commitFk(*selected);
+    return jacobian;
 }
 
 bool A2Solution::canEffect(Joint2D& effector, Joint2D& effected) {

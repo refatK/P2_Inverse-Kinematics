@@ -57,6 +57,7 @@ private:
     void setRelevantJoints();
     bool isXRow(int rowIndex);
     bool canEffect(Joint2D& effector, Joint2D& effected);
+    MatrixXf createJacobian(std::vector<Joint2D*>& allJoints, std::vector<Joint2D*>& lockedJoints, float epsilon);
 };
 
 #endif // A2SOLUTION_H
