@@ -41,6 +41,7 @@ private:
     QVector2D eigenMathToQt(Vector3f mathVec);
     bool isRoot(Joint2D& joint);
     int getJointIndex(Joint2D& joint);
+    void updatePositionsInUi(std::vector<Joint2D*>& allJointsToUpdate, std::vector<QVector2D>& newPosAllJoints);
 
     QVector2D movToMake;
     float rotToMake;
@@ -49,25 +50,29 @@ private:
 
     // CONSTANTS
     float epsilon = 0; // tried 0.001
-    float lambda = 10; // ballpark is 5-50
-    float beta = 0.2; // idk
-    int maxIterations = 30;
-    float inRange = 1;
+    float lambda = 40; // ballpark is 5-50
+    float beta = 0.05; // idk
+    int maxIterations = 80;
+    float inRangeMag = 0.1;
 
     Joint2D* m_root;
+    int m_selected_index;
     std::vector<Joint2D*> m_used_joints;
     std::vector<QVector2D> pos_used_joints;
     std::vector<Joint2D*> m_locked_joints;
     std::vector<QVector2D*> pos_locked_joints;
 
     void setRoot();
-    void setRelevantJoints();
+    void setRelevantJoints(Joint2D* selected);
     bool isXRow(int rowIndex);
     bool canEffect(Joint2D& effector, Joint2D& effected);
     int getParentIndex(std::vector<Joint2D*>& allJoints, int currIndex);
+    std::vector<int> getChildIndexes(std::vector<Joint2D*>& allJoints, int currIndex);
     MatrixXf createJacobian(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, float epsilon);
     VectorXf createErrorVec(std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, Joint2D& selected, QVector2D& expectedPos);
     VectorXf doDls(MatrixXf j, VectorXf e, float lambda);
+    std::vector<QVector2D> doFkPassWithChanges(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, VectorXf& deltaTheta);
+    void rotateJointByNoUpdate(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, int currIndex, int parentIndex, QVector2D currMathVecFromParent, float theta);
 };
 
 #endif // A2SOLUTION_H

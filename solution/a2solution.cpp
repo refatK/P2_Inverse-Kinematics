@@ -29,6 +29,7 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 
     // clear data
     this->m_root = nullptr;
+    this->m_selected_index = -1;
     this->m_used_joints.clear();
     this->pos_used_joints.clear();
     this->m_locked_joints.clear();
@@ -36,39 +37,91 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 
     // setup data
     this->setRoot(); // TODO: currently just takes first root it sees, not based on selected
-    this->setRelevantJoints();
+    this->setRelevantJoints(selected);
 
     MatrixXf jacobian;
     VectorXf errorVector;
+    VectorXf deltaTheta;
 
-    for (int i=0; i<1; ++i) {
-//    for (int i=0; i<this->maxIterations; ++i) {
+//    for (int i=0; i<1; ++i) {
+    for (int i=0; i<this->maxIterations; ++i) {
         // get needed values
         jacobian = this->createJacobian(this->m_used_joints, this->pos_used_joints, this->m_locked_joints, this->pos_locked_joints, this->epsilon);
         errorVector = this->createErrorVec(this->m_locked_joints, this->pos_locked_joints, *selected, mouse_pos);
         errorVector = this->beta * errorVector;
 
         // do DLS
-        VectorXf deltaTheta = this->doDls(jacobian, errorVector, this->lambda);
+        deltaTheta = this->doDls(jacobian, errorVector, this->lambda);
 
-        // do FK with new angles
+        // do FK with new angles (TODO: can maybe save and return old poses if need them, like for collisions)
+        this->doFkPassWithChanges(this->m_used_joints, this->pos_used_joints, deltaTheta);
+
+        // check if close enough, in which case, done calculations
+        float errorMag = (pos_used_joints[this->m_selected_index] - mouse_pos).length();
+        if (errorMag < this->inRangeMag) {
+            break;
+        }
     }
 
-//    MatrixXf jacobian = this->createJacobian(this->m_used_joints, this->m_locked_joints, this->epsilon);
-//    VectorXf errorVector = this->createErrorVec(this->m_locked_joints, *selected, mouse_pos);
-//    VectorXf deltaTheta = this->doDls(jacobian, errorVector, this->lambda);
-
     std::cout << "--------------------------" << std::endl;
-    std::cout << errorVector << std::endl;
+    std::cout << deltaTheta << std::endl;
     std::cout << "--------------------------" << std::endl;
 
     std::cout << "--------------------------" << std::endl;
     std::cout << jacobian << std::endl;
     std::cout << "--------------------------" << std::endl;
 
-    // Do Forward Kinematics
-//    this->doFkPass(*selected, mouse_pos);
-//    this->commitFk(*selected);
+    // Update Values
+    this->updatePositionsInUi(this->m_used_joints, this->pos_used_joints);
+}
+
+void A2Solution::updatePositionsInUi(std::vector<Joint2D*>& allJointsToUpdate, std::vector<QVector2D>& newPosAllJoints) {
+    for (int i=0; i<allJointsToUpdate.size(); ++i) {
+        allJointsToUpdate[i]->set_position(newPosAllJoints[i]);
+    }
+}
+
+
+std::vector<QVector2D> A2Solution::doFkPassWithChanges(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, VectorXf& deltaTheta) {
+    // changes at 0 and 1 are the translations of the root
+    // TODO: ignore root for now
+
+    // rotate the joints
+    for (int i=0; i<allJoints.size(); ++i) {
+        if (i == 0) { continue; } // ignore root
+        int row = i+1;
+
+        int parentIndex = this->getParentIndex(allJoints, i);
+        float theta = deltaTheta[row];
+        QVector2D mathVecFromParent = this->qtToMathCoords(posAllJoints[i] - posAllJoints[parentIndex]);
+
+        this->rotateJointByNoUpdate(allJoints, posAllJoints, i, parentIndex, mathVecFromParent, theta);
+    }
+
+    return posAllJoints;
+}
+
+void A2Solution::rotateJointByNoUpdate(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, int currIndex, int parentIndex, QVector2D currMathVecFromParent, float theta) {
+    QVector2D posBeforeUpdate = posAllJoints[currIndex];
+    float mag = currMathVecFromParent.length();
+    float currRot = this->getMathAngle(currMathVecFromParent);
+
+    float newRot = currRot + theta;
+    QVector2D newMathVecFromParent = QVector2D(mag*std::cos(newRot), mag*std::sin(newRot));
+    QVector2D newQtVecFromParent = this->mathToQtCoords(newMathVecFromParent);
+
+    // Officially update the position
+    posAllJoints[currIndex] = posAllJoints[parentIndex] + newQtVecFromParent;
+
+//    for (Joint2D* child : allJoints[currIndex]->get_children()) {
+//        QVector2D mathVecFromJoint = this->qtToMathCoords(child->get_position() - posBeforeUpdate);
+//        rotateJointBy(*child, mathVecFromJoint, theta);
+//    }
+
+    for (int childIndex : this->getChildIndexes(allJoints, currIndex)) {
+        QVector2D mathVecFromJoint = this->qtToMathCoords(posAllJoints[childIndex] - posBeforeUpdate);
+        rotateJointByNoUpdate(allJoints, posAllJoints, childIndex, currIndex, mathVecFromJoint, theta);
+    }
 }
 
 VectorXf A2Solution::doDls(MatrixXf j, VectorXf e, float lambda) {
@@ -164,6 +217,25 @@ MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vecto
     return jacobian;
 }
 
+std::vector<int> A2Solution::getChildIndexes(std::vector<Joint2D*>& allJoints, int currIndex) {
+    std::vector<int> indexes;
+    Joint2D* curr = allJoints[currIndex];
+    int numChildren = curr->get_children().size();
+
+    if (numChildren == 0) { return indexes; } // returns empty list if no child
+
+    int found = 0;
+    for(int i=currIndex+1; i<allJoints.size(); ++i) {
+        if (allJoints[i]->get_parents()[0] == curr) {
+            indexes.push_back(i);
+            ++found;
+            if (found == numChildren) { break; }
+        }
+    }
+
+    return indexes;
+}
+
 int A2Solution::getParentIndex(std::vector<Joint2D*>& allJoints, int currIndex) {
     Joint2D* curr = allJoints[currIndex];
     Joint2D* parent = curr->get_parents()[0];
@@ -197,7 +269,7 @@ bool A2Solution::isXRow(int rowIndex) {
     return (rowIndex % 2 == 0);
 }
 
-void A2Solution::setRelevantJoints() {
+void A2Solution::setRelevantJoints(Joint2D* selected) {
     // add root first always (assumes root is set)
     this->m_used_joints.push_back(this->m_root);
     this->pos_used_joints.push_back(this->m_root->get_position());
@@ -205,6 +277,8 @@ void A2Solution::setRelevantJoints() {
     if (m_root->is_locked()) {
         this->m_locked_joints.push_back(this->m_root);
         this->pos_locked_joints.push_back(&this->pos_used_joints.back());
+
+        if (m_root == selected) { this->m_selected_index = 0; }
     }
 
     Joint2D* current;
@@ -225,6 +299,8 @@ void A2Solution::setRelevantJoints() {
         if (current->is_locked()) {
             this->m_locked_joints.push_back(current);
             this->pos_locked_joints.push_back(&this->pos_used_joints.back());
+
+            if (current == selected) { this->m_selected_index = this->m_used_joints.size() - 1; }
         }
         queue.pop_front();
     }
