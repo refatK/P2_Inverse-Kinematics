@@ -22,10 +22,134 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     std::cout << "\nNumber of Nodes: " << m_joints.size() << std::endl << std::endl;
     std::cout << ">NODE SELECTED: #" << getJointIndex(*selected) << std::endl;
 
+    // clear data
+    this->m_root = nullptr;
+    this->m_used_joints.clear();
+    this->m_locked_joints.clear();
+    // setup data
+    this->setRoot(); // TODO: currently just takes first root it sees, not based on selected
+    this->setRelevantJoints(); // Only looks at elements from the root
+
+    // Build Jacobian
+    // ---
+    int numJoints = this->m_used_joints.size();
+    int numLocked = this->m_locked_joints.size();
+
+    int numRows = 2 * numLocked;
+    int numCols = numJoints + 1; // The plus one is for the root which has 2 degrees of freedom
+
+    MatrixXf jacobian(numRows, numCols);
+    // set root columns (first 2 columns)
+    for (int i=0; i<numRows; ++i) {
+        if (this->isXRow(i)) {
+            jacobian(i, 0) = this->epsilon;
+            jacobian(i, 1) = 0;
+        } else {
+            jacobian(i, 0) = 0;
+            jacobian(i, 1) = this->epsilon;
+        }
+    }
+
+    for (int i=0; i<this->m_used_joints.size(); ++i) {
+        if (i == 0) { continue; } // skip root, its already set
+        int col = i+1;
+
+        for (int row=0; row<numRows; row=row+2) {
+            Joint2D* effected = m_locked_joints[row/2];
+
+            // root case
+            if (this->isRoot(*effected)) {
+                jacobian(row, col) = 0; // no one can effect the root
+                jacobian(row+1, col) = 0;
+                continue;
+            }
+
+            // other cases
+            Joint2D* effector = m_used_joints[i];
+
+            // effected not a child of effector
+            if (!this->canEffect(*effector, *effected)) {
+                jacobian(row, col) = 0;
+                jacobian(row+1, col) = 0;
+                continue;
+            }
+
+            // the effector will have an effect, must handle to get values
+            Vector3f effectedMath = qtToEigenMath(effected->get_position());
+            Vector3f effectorMath = qtToEigenMath(effector->get_parents()[0]->get_position()); // we want the pos of what we are roating around
+            Vector3f delChange = Vector3f::UnitZ().cross(effectedMath - effectorMath);
+            jacobian(row, col) = delChange.x();
+            jacobian(row+1, col) = delChange.y();
+
+        }
+    }
+
+    std::cout << "--------------------------" << std::endl;
+    std::cout << jacobian << std::endl;
+    std::cout << "--------------------------" << std::endl;
+    // ---
 
     // Do Forward Kinematics
-    this->doFkPass(*selected, mouse_pos);
-    this->commitFk(*selected);
+//    this->doFkPass(*selected, mouse_pos);
+//    this->commitFk(*selected);
+}
+
+bool A2Solution::canEffect(Joint2D& effector, Joint2D& effected) {
+    Joint2D* j = &effected;
+    if (&effector == &effected) { return true; } // node will obviously be effected when it is rotated
+
+    bool hasParent = !j->get_parents().empty();
+    while (hasParent) {
+        Joint2D* parent = j->get_parents()[0];
+        if (parent == &effector) {
+            return true;
+        } else {
+            j = parent;
+            hasParent = !j->get_parents().empty();
+        }
+    }
+    return false;
+}
+
+
+bool A2Solution::isXRow(int rowIndex) {
+    return (rowIndex % 2 == 0);
+}
+
+void A2Solution::setRelevantJoints() {
+    // add root first always (assumes root is set)
+    this->m_used_joints.push_back(this->m_root);
+    if (m_root->is_locked()) {
+        this->m_locked_joints.push_back(this->m_root);
+    }
+
+    Joint2D* current;
+    std::deque<Joint2D*> queue;
+    for (Joint2D* child : this->m_root->get_children()) {
+        queue.push_back(child);
+    }
+
+    while (queue.size() > 0) {
+        current = queue.front();
+        for (Joint2D* child : current->get_children()) {
+            queue.push_back(child);
+        }
+
+        this->m_used_joints.push_back(current);
+        if (current->is_locked()) {
+            this->m_locked_joints.push_back(current);
+        }
+        queue.pop_front();
+    }
+}
+
+void A2Solution::setRoot() {
+    for (Joint2D* joint : this->m_joints) {
+        if (this->isRoot(*joint)) {
+            this->m_root = joint;
+            return;
+        }
+    }
 }
 
 void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
@@ -105,6 +229,18 @@ float A2Solution::getMathAngle(QVector2D mathVec) {
 float A2Solution::radsToDegrees(float radians) {
     float pi = 4 * std::atan(1);
     return (radians * 180.0f) / pi;
+}
+
+Vector3f A2Solution::qtToEigenMath(QVector2D qtVec) {
+    QVector2D mathVec = qtVec;
+    mathVec.setY(-qtVec.y());
+    return Vector3f(mathVec.x(), mathVec.y(), 0);
+}
+
+QVector2D A2Solution::eigenMathToQt(Vector3f mathVec) {
+    QVector2D qtVec = QVector2D(mathVec.x(), mathVec.y());
+    qtVec.setY(-mathVec.y());
+    return qtVec;
 }
 
 QVector2D A2Solution::qtToMathCoords(QVector2D qtVec) {

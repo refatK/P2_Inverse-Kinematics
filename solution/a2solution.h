@@ -8,7 +8,7 @@
 #include "OpenGL/elements/link2d.h"
 
 #include "dependencies/Eigen/Dense"
-using Eigen::Vector2f;
+using Eigen::Vector3f;
 using Eigen::Rotation2D;
 using Eigen::MatrixXf;
 
@@ -36,6 +36,8 @@ private:
     float radsToDegrees(float radians);
     QVector2D qtToMathCoords(QVector2D qtVec);
     QVector2D mathToQtCoords(QVector2D mathVec);
+    Vector3f qtToEigenMath(QVector2D qtVec);
+    QVector2D eigenMathToQt(Vector3f mathVec);
     bool isRoot(Joint2D& joint);
     int getJointIndex(Joint2D& joint);
 
@@ -43,6 +45,18 @@ private:
     float rotToMake;
     bool doMov = false;
     bool doRot = false;
+
+    // CONSTANTS
+    float epsilon = 0.001;
+
+    Joint2D* m_root;
+    std::vector<Joint2D*> m_used_joints;
+    std::vector<Joint2D*> m_locked_joints;
+
+    void setRoot();
+    void setRelevantJoints();
+    bool isXRow(int rowIndex);
+    bool canEffect(Joint2D& effector, Joint2D& effected);
 };
 
 #endif // A2SOLUTION_H
