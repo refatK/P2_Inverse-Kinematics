@@ -22,29 +22,62 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     std::cout << "\nNumber of Nodes: " << m_joints.size() << std::endl << std::endl;
     std::cout << ">NODE SELECTED: #" << getJointIndex(*selected) << std::endl;
 
+    // selected must be locked, else exit
+    if (!selected->is_locked()) {
+        return;
+    }
+
     // clear data
     this->m_root = nullptr;
     this->m_used_joints.clear();
     this->m_locked_joints.clear();
     // setup data
     this->setRoot(); // TODO: currently just takes first root it sees, not based on selected
-    this->setRelevantJoints(); // Only looks at elements from the root
+    this->setRelevantJoints();
 
+    // TODO: scale error using a Beta factor
+    MatrixXf errorVector = this->createErrorVec(this->m_locked_joints, *selected, mouse_pos);
     MatrixXf jacobian = this->createJacobian(this->m_used_joints, this->m_locked_joints, this->epsilon);
+
+    std::cout << "--------------------------" << std::endl;
+    std::cout << errorVector << std::endl;
+    std::cout << "--------------------------" << std::endl;
 
     std::cout << "--------------------------" << std::endl;
     std::cout << jacobian << std::endl;
     std::cout << "--------------------------" << std::endl;
-    // ---
 
     // Do Forward Kinematics
 //    this->doFkPass(*selected, mouse_pos);
 //    this->commitFk(*selected);
 }
 
+MatrixXf A2Solution::createErrorVec(std::vector<Joint2D*>& lockedJoints, Joint2D& selected, QVector2D& expectedPos) {
+    int numLocked = lockedJoints.size();
+    int numRows = 2 * numLocked;
+
+    MatrixXf errorVec(numRows, 1);
+
+    for (int row=0; row<numRows; row=row+2) {
+        Joint2D* current = lockedJoints[row/2];
+        Vector3f currMath = this->qtToEigenMath(current->get_position());
+
+        if (current == &selected) {
+            Vector3f expectedMath = this->qtToEigenMath(expectedPos);
+            Vector3f error = expectedMath - currMath;
+            errorVec(row, 0) = error.x();
+            errorVec(row+1, 0) = error.y();
+        } else {
+            // TODO: need to store initial postion and current position, just 0 for now
+            errorVec(row, 0) = 0;
+            errorVec(row+1, 0) = 0;
+        }
+    }
+
+    return errorVec;
+}
+
 MatrixXf A2Solution::createJacobian(std::vector<Joint2D*>& allJoints, std::vector<Joint2D*>& lockedJoints, float epsilon) {
-    // Build Jacobian
-    // ---
     int numJoints = allJoints.size();
     int numLocked = lockedJoints.size();
 
