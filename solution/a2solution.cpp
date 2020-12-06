@@ -56,6 +56,15 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
         // do FK with new angles (TODO: can maybe save and return old poses if need them, like for collisions)
         this->doFkPassWithChanges(this->m_used_joints, this->pos_used_joints, deltaTheta);
 
+        // collision detection
+        if (!this->m_obstacles.empty()) {
+            bool isCollision = this->collisionExists(this->m_used_joints, this->pos_used_joints, this->m_obstacles, this->inRangeMag);
+            if (isCollision) {
+                std::cout << "!!!!! WE ARE COLLIDING !!!!" << std::endl;
+                return;
+            }
+        }
+
         // check if close enough, in which case, done calculations
         float errorMag = (pos_used_joints[this->m_selected_index] - mouse_pos).length();
         if (errorMag < this->inRangeMag) {
@@ -63,17 +72,97 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
         }
     }
 
-    std::cout << "--------------------------" << std::endl;
-    std::cout << deltaTheta << std::endl;
-    std::cout << "--------------------------" << std::endl;
-
-    std::cout << "--------------------------" << std::endl;
-    std::cout << jacobian << std::endl;
-    std::cout << "--------------------------" << std::endl;
+    this->printMatrix(jacobian, "FINAL JACOBIAN");
+    this->printMatrix(errorVector, "FINAL ERROR VECTOR");
+    this->printMatrix(deltaTheta, "FINAL DELTA THETA VECTOR");
 
     // Update Values
     this->updatePositionsInUi(this->m_used_joints, this->pos_used_joints);
 }
+
+bool A2Solution::collisionExists(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float inRangeMag) {
+    for (int iO=0; iO<obstacles.size(); ++iO) {
+        for (int iJ=0; iJ<posAllJoints.size(); ++iJ) {
+            Obstacle2D* obs = obstacles[iO];
+            Joint2D* joint = allJoints[iJ];
+            QVector2D jPos = posAllJoints[iJ];
+
+            // first check joint collisions
+            float distance = obs->m_center.distanceToPoint(jPos);
+            if (distance <= (joint->get_radius() + obs->m_radius + inRangeMag)) {
+                return true;
+            }
+
+            // then check line collisions
+            for (int iJ2=0; iJ2<posAllJoints.size(); ++iJ2) {
+                if (iJ == iJ2) { continue; } // skip self cases
+                if (!this->isConnected(joint, allJoints[iJ2])) { continue; }
+                if (this->isLineCollide(obs, jPos, posAllJoints[iJ2])) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool A2Solution::isConnected(Joint2D* j1, Joint2D* j2) {
+    if (!this->isRoot(*j1)) {
+        if (j1->get_parents()[0] == j2) { return true; }
+    }
+
+    if (!this->isRoot(*j2)) {
+        if (j2->get_parents()[0] == j1) { return true; }
+    }
+
+    return false;
+}
+
+bool A2Solution::isLineCollide(Obstacle2D* obs, QVector2D j1Pos, QVector2D j2Pos) {
+    // if link
+    float jointDist = (j2Pos - j1Pos).length();
+    if (jointDist < (2*obs->m_radius)) { return false; }
+
+    // x
+    float leftX, rightX;
+    if (j1Pos.x() < j2Pos.x()) {
+        leftX = j1Pos.x();
+        rightX = j2Pos.x();
+    } else {
+        leftX = j2Pos.x();
+        rightX = j1Pos.x();
+    }
+
+    float obsX = obs->m_center.x();
+    if (obsX+obs->m_radius < leftX || obsX-obs->m_radius > rightX) { return false; }
+
+    // y
+    float downY, upY;
+    if (j1Pos.y() < j2Pos.y()) {
+        downY = j1Pos.y();
+        upY = j2Pos.y();
+    } else {
+        downY = j2Pos.y();
+        upY = j1Pos.y();
+    }
+
+    float obsY = obs->m_center.y();
+    if (obsY+obs->m_radius < downY || obsY-obs->m_radius > upY) { return false; }
+
+    // all basic cases set, now check to line
+    float distFromLine = obs->m_center.distanceToLine(j1Pos, (j2Pos - j1Pos).normalized());
+    return distFromLine < obs->m_radius;
+}
+
+
+void A2Solution::printMatrix(MatrixXf m, std::string title) {
+    std::cout << "--------------------------" << std::endl;
+    std::cout << "-----" + title + "-----" << std::endl;
+    std::cout << m << std::endl;
+    std::cout << "--------------------------" << std::endl;
+}
+
 
 void A2Solution::updatePositionsInUi(std::vector<Joint2D*>& allJointsToUpdate, std::vector<QVector2D>& newPosAllJoints) {
     for (int i=0; i<allJointsToUpdate.size(); ++i) {
@@ -154,6 +243,12 @@ VectorXf A2Solution::createErrorVec(std::vector<Joint2D*>& lockedJoints, std::ve
             // I think done now because of posVectors
             errorVec(row) = 0;
             errorVec(row+1) = 0;
+
+            // TODO: doesnt really seem to work (although seems same without it)
+//            Vector3f mustStayPosMath = this->qtToEigenMath(current->get_position());
+//            Vector3f error = mustStayPosMath - currMath;
+//            errorVec(row) = error.x();
+//            errorVec(row+1) = error.y();
         }
     }
 

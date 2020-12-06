@@ -2,6 +2,7 @@
 #define A2SOLUTION_H
 
 #include <vector>
+#include <string>
 
 #include "OpenGL/elements/joint2d.h"
 #include "OpenGL/elements/obstacle2d.h"
@@ -49,11 +50,11 @@ private:
     bool doRot = false;
 
     // CONSTANTS
-    float epsilon = 0; // tried 0.001
+    float epsilon = 0; // tried 1
     float lambda = 40; // ballpark is 5-50
-    float beta = 0.01; // idk
+    float beta = 0.01; // idk 0.01 seemed to work
     int maxIterations = 100;
-    float inRangeMag = 0.1;
+    float inRangeMag = 0.1; // 0.1 looks pretty good
 
     Joint2D* m_root;
     int m_selected_index;
@@ -73,6 +74,11 @@ private:
     VectorXf doDls(MatrixXf j, VectorXf e, float lambda);
     std::vector<QVector2D> doFkPassWithChanges(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, VectorXf& deltaTheta);
     void rotateJointByNoUpdate(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, int currIndex, int parentIndex, QVector2D currMathVecFromParent, float theta);
+    void printMatrix(MatrixXf m, std::string title);
+
+    bool collisionExists(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float inRangeMag);
+    bool isLineCollide(Obstacle2D* obs, QVector2D j1Pos, QVector2D j2Pos);
+    bool isConnected(Joint2D* j1, Joint2D* j2);
 };
 
 #endif // A2SOLUTION_H
