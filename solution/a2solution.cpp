@@ -45,6 +45,14 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 
 //    for (int i=0; i<1; ++i) {
     for (int i=0; i<this->maxIterations; ++i) {
+
+        // get closest points
+        this->m_close_point_joints.clear();
+        this->pos_close_points.clear();
+        this->obs_close_point.clear();
+        this->setClosestPoints(this->m_used_joints, this->pos_used_joints, this->m_obstacles, this->areaEffectRadius);
+
+
         // get needed values
         jacobian = this->createJacobian(this->m_used_joints, this->pos_used_joints, this->m_locked_joints, this->pos_locked_joints, this->epsilon);
         errorVector = this->createErrorVec(this->m_locked_joints, this->pos_locked_joints, *selected, mouse_pos);
@@ -61,6 +69,9 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
             bool isCollision = this->collisionExists(this->m_used_joints, this->pos_used_joints, this->m_obstacles, this->inRangeMag);
             if (isCollision) {
                 std::cout << "!!!!! WE ARE COLLIDING !!!!" << std::endl;
+                this->printMatrix(jacobian, "FINAL JACOBIAN");
+                this->printMatrix(errorVector, "FINAL ERROR VECTOR");
+                this->printMatrix(deltaTheta, "FINAL DELTA THETA VECTOR");
                 return;
             }
         }
@@ -80,6 +91,105 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     this->updatePositionsInUi(this->m_used_joints, this->pos_used_joints);
 }
 
+void A2Solution::setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float effectRadAdd) {
+    for (int iO=0; iO<obstacles.size(); ++iO) {
+        Obstacle2D* obs = obstacles[iO];
+        bool obsClosestPointSet = false;
+        float currClosestDistance = 9999999;
+        float areaEff = obs->m_radius + effectRadAdd;
+
+        for (int iJ=0; iJ<posAllJoints.size(); ++iJ) {
+            Joint2D* joint = allJoints[iJ];
+            QVector2D jPos = posAllJoints[iJ];
+
+            // check closest by joint
+            float distance = obs->m_center.distanceToPoint(jPos);
+
+            if (distance <= areaEff && distance < currClosestDistance) {
+                if (obsClosestPointSet) {
+                    this->m_close_point_joints.back() = joint;
+                    this->pos_close_points.back() = jPos;
+                    this->obs_close_point.back() = obs;
+                    currClosestDistance = distance;
+
+                } else {
+                    this->m_close_point_joints.push_back(joint);
+                    this->pos_close_points.push_back(jPos);
+                    this->obs_close_point.push_back(obs);
+                    currClosestDistance = distance;
+                    obsClosestPointSet = true;
+                }
+            }
+
+            // then check closest by line
+            if (this->isRoot(*joint)) { continue; }
+            int iJPar = this->getParentIndex(allJoints, iJ);
+
+            QVector2D jParPos = posAllJoints[iJPar];
+            QVector2D* closestPointToObs = this->closestLinePointToObs(obs, jPos, jParPos);
+
+            if (closestPointToObs == nullptr) { continue; } // skip impossible closest case
+
+            float distFromLine = (obs->m_center - *closestPointToObs).length();
+
+            if (distFromLine <= areaEff && distFromLine < currClosestDistance) {
+                if (obsClosestPointSet) {
+                    this->m_close_point_joints.back() = joint;
+                    this->pos_close_points.back() = *closestPointToObs;
+                    this->obs_close_point.back() = obs;
+                    currClosestDistance = distFromLine;
+
+                } else {
+                    this->m_close_point_joints.push_back(joint);
+                    this->pos_close_points.push_back(*closestPointToObs);
+                    this->obs_close_point.push_back(obs);
+                    currClosestDistance = distFromLine;
+                    obsClosestPointSet = true;
+                }
+            }
+        }
+    }
+}
+
+QVector2D* A2Solution::closestLinePointToObs(Obstacle2D* obs, QVector2D j1Pos, QVector2D j2Pos) {
+    // x
+    float leftX, rightX;
+    if (j1Pos.x() < j2Pos.x()) {
+        leftX = j1Pos.x();
+        rightX = j2Pos.x();
+    } else {
+        leftX = j2Pos.x();
+        rightX = j1Pos.x();
+    }
+
+    float obsX = obs->m_center.x();
+    if (obsX+obs->m_radius < leftX || obsX-obs->m_radius > rightX) { return nullptr; }
+
+    // y
+    float downY, upY;
+    if (j1Pos.y() < j2Pos.y()) {
+        downY = j1Pos.y();
+        upY = j2Pos.y();
+    } else {
+        downY = j2Pos.y();
+        upY = j1Pos.y();
+    }
+
+    float obsY = obs->m_center.y();
+    if (obsY+obs->m_radius < downY || obsY-obs->m_radius > upY) { return nullptr; }
+
+    // all basic cases checked where line would not have the closest point, now get the point
+    // used (https://stackoverflow.com/questions/51905268/how-to-find-closest-point-on-line) for help with the logic
+    QVector2D dir = (j2Pos - j1Pos).normalized();
+    QVector2D vecToObsFromJ1 = obs->m_center - j1Pos;
+    float distOfClosePointFromJ1 = QVector2D::dotProduct(vecToObsFromJ1, dir);
+    QVector2D posOfPoint = j1Pos + (distOfClosePointFromJ1 * dir);
+
+    QVector2D* ptrPosOfPoint = new QVector2D(posOfPoint.x(), posOfPoint.y());    // check this isnt broken might be
+    return ptrPosOfPoint;
+}
+
+
 bool A2Solution::collisionExists(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float inRangeMag) {
     for (int iO=0; iO<obstacles.size(); ++iO) {
         for (int iJ=0; iJ<posAllJoints.size(); ++iJ) {
@@ -93,13 +203,11 @@ bool A2Solution::collisionExists(std::vector<Joint2D*>& allJoints, std::vector<Q
                 return true;
             }
 
-            // then check line collisions
-            for (int iJ2=0; iJ2<posAllJoints.size(); ++iJ2) {
-                if (iJ == iJ2) { continue; } // skip self cases
-                if (!this->isConnected(joint, allJoints[iJ2])) { continue; }
-                if (this->isLineCollide(obs, jPos, posAllJoints[iJ2])) {
-                    return true;
-                }
+            // then get line case
+            if (this->isRoot(*joint)) { continue; }
+            int iJPar = this->getParentIndex(allJoints, iJ);
+            if (this->isLineCollide(obs, jPos, posAllJoints[iJPar])) {
+                return true;
             }
         }
     }

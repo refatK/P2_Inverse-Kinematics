@@ -56,12 +56,17 @@ private:
     int maxIterations = 100;
     float inRangeMag = 0.1; // 0.1 looks pretty good
 
+    float areaEffectRadius = 100;
+
     Joint2D* m_root;
     int m_selected_index;
     std::vector<Joint2D*> m_used_joints;
     std::vector<QVector2D> pos_used_joints;
     std::vector<Joint2D*> m_locked_joints;
     std::vector<QVector2D*> pos_locked_joints;
+    std::vector<Joint2D*> m_close_point_joints;
+    std::vector<QVector2D> pos_close_points;
+    std::vector<Obstacle2D*> obs_close_point;
 
     void setRoot(Joint2D* selected);
     void setRelevantJoints(Joint2D* selected);
@@ -79,6 +84,9 @@ private:
     bool collisionExists(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float inRangeMag);
     bool isLineCollide(Obstacle2D* obs, QVector2D j1Pos, QVector2D j2Pos);
     bool isConnected(Joint2D* j1, Joint2D* j2);
+    void setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float effectRadAdd);
+    QVector2D* closestLinePointToObs(Obstacle2D* obs, QVector2D j1Pos, QVector2D j2Pos);
+
 };
 
 #endif // A2SOLUTION_H
