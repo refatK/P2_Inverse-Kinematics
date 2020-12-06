@@ -54,9 +54,13 @@ private:
     float lambda = 40; // ballpark is 5-50
     float beta = 0.01; // idk 0.01 seemed to work
     int maxIterations = 100;
-    float inRangeMag = 0.1; // 0.1 looks pretty good
+    float inRangeMag = 0.5; // 0.1 looks pretty good
 
-    float areaEffectRadius = 100;
+    float areaEffectRadius = 150;
+    float dUg = 115;
+
+    bool useObsAvoid = true;
+
 
     Joint2D* m_root;
     int m_selected_index;
@@ -65,7 +69,7 @@ private:
     std::vector<Joint2D*> m_locked_joints;
     std::vector<QVector2D*> pos_locked_joints;
     std::vector<Joint2D*> m_close_point_joints;
-    std::vector<QVector2D> pos_close_points;
+    std::vector<QVector2D*> pos_close_points;
     std::vector<Obstacle2D*> obs_close_point;
 
     void setRoot(Joint2D* selected);
@@ -76,7 +80,8 @@ private:
     std::vector<int> getChildIndexes(std::vector<Joint2D*>& allJoints, int currIndex);
     MatrixXf createJacobian(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, float epsilon);
     VectorXf createErrorVec(std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, Joint2D& selected, QVector2D& expectedPos);
-    VectorXf doDls(MatrixXf j, VectorXf e, float lambda);
+    VectorXf getDeltaThetaMatrix(MatrixXf j, VectorXf e, float lambda);
+    MatrixXf dls(MatrixXf j, float lambda);
     std::vector<QVector2D> doFkPassWithChanges(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, VectorXf& deltaTheta);
     void rotateJointByNoUpdate(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, int currIndex, int parentIndex, QVector2D currMathVecFromParent, float theta);
     void printMatrix(MatrixXf m, std::string title);
@@ -86,6 +91,10 @@ private:
     bool isConnected(Joint2D* j1, Joint2D* j2);
     void setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float effectRadAdd);
     QVector2D* closestLinePointToObs(Obstacle2D* obs, QVector2D j1Pos, QVector2D j2Pos);
+    VectorXf createErrorVecForObs(std::vector<Joint2D*>& obsJoints, std::vector<QVector2D*>& posObsPoints);
+    VectorXf getDeltaThetaMatrixUsingAvoidace(MatrixXf jE, VectorXf xE, MatrixXf jO, VectorXf xO,
+                                              float lamE, float lam2, float aN, float aO);
+    float getSmallestObstacleMag();
 
 };
 

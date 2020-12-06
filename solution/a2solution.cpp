@@ -40,11 +40,18 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     this->setRelevantJoints(selected);
 
     MatrixXf jacobian;
+    MatrixXf jacobianObs;
     VectorXf errorVector;
+    VectorXf errorVectorObs;
     VectorXf deltaTheta;
+
+    bool isCollide = false;
+
 
 //    for (int i=0; i<1; ++i) {
     for (int i=0; i<this->maxIterations; ++i) {
+
+        isCollide = false;
 
         // get closest points
         this->m_close_point_joints.clear();
@@ -58,8 +65,54 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
         errorVector = this->createErrorVec(this->m_locked_joints, this->pos_locked_joints, *selected, mouse_pos);
         errorVector = this->beta * errorVector;
 
+        // get needed values for obstacle avoidance
+        jacobianObs = this->createJacobian(this->m_used_joints, this->pos_used_joints, this->m_close_point_joints, this->pos_close_points, this->epsilon);
+        errorVectorObs = this->createErrorVecForObs(this->m_close_point_joints, this->pos_close_points);
+//        errorVectorObs = this->beta * errorVectorObs;
+
         // do DLS
-        deltaTheta = this->doDls(jacobian, errorVector, this->lambda);
+//        deltaTheta = this->getDeltaThetaMatrix(jacobian, errorVector, this->lambda);
+
+        float lamE = this->lambda;
+        float lam2 = 20; // try diff stuff
+        float aNmax = 1;
+        float aOmax = 0.5;
+        float aN = 0.0001;
+        float aO = 0.0001;
+
+        float dSoi = this->areaEffectRadius;
+        float dUg = this->dUg;
+        float dTa  = this->inRangeMag;
+        float dist = this->getSmallestObstacleMag();
+
+        if (dist >= dSoi) {
+            aN = 0.0001;
+            aO = 0.0001;
+        } else if (dist > dUg) {
+            aO = 0.0001;
+
+            float diff = dSoi - dUg;
+            float selfDiff = dist - dUg;
+            aN = aNmax * (1 - (selfDiff/diff));
+        } else if (dist > this->inRangeMag) {
+            aN = aNmax;
+
+            float diff = dUg - dTa;
+            float selfDiff = dist - dTa;
+            aO = aOmax * (1 - (selfDiff/diff));
+        } else {
+            aN = aNmax;
+            aO = aOmax;
+        }
+
+
+        if (this->useObsAvoid) {
+            deltaTheta = this->getDeltaThetaMatrixUsingAvoidace(jacobian, errorVector, jacobianObs, errorVectorObs,
+                                                                lamE, lam2, aN, aO);
+        } else {
+            deltaTheta = this->getDeltaThetaMatrix(jacobian, errorVector, this->lambda);
+        }
+
 
         // do FK with new angles (TODO: can maybe save and return old poses if need them, like for collisions)
         this->doFkPassWithChanges(this->m_used_joints, this->pos_used_joints, deltaTheta);
@@ -72,6 +125,7 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
                 this->printMatrix(jacobian, "FINAL JACOBIAN");
                 this->printMatrix(errorVector, "FINAL ERROR VECTOR");
                 this->printMatrix(deltaTheta, "FINAL DELTA THETA VECTOR");
+                isCollide = true;
                 return;
             }
         }
@@ -87,8 +141,76 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
     this->printMatrix(errorVector, "FINAL ERROR VECTOR");
     this->printMatrix(deltaTheta, "FINAL DELTA THETA VECTOR");
 
+    if (isCollide) { return; }
+
     // Update Values
     this->updatePositionsInUi(this->m_used_joints, this->pos_used_joints);
+}
+
+VectorXf A2Solution::getDeltaThetaMatrixUsingAvoidace(MatrixXf jE, VectorXf xE, MatrixXf jO, VectorXf xO,
+                                                      float lamE, float lam2, float aN, float aO) {
+
+    MatrixXf jEplus = this->dls(jE, lamE);
+    MatrixXf i = MatrixXf::Identity(jEplus.rows(), jEplus.rows());
+
+    MatrixXf p1 = jEplus*xE;
+
+    MatrixXf p2 = jO * (i - (jEplus*jE));
+    MatrixXf p2Plus = this->dls(p2, lam2);
+
+    MatrixXf p3_1 = aO*xO;
+    MatrixXf p3_2 = jO * jEplus * xE;
+    MatrixXf p3 = p3_1 - p3_2;
+
+    return p1 + ( (aN*p2Plus) * (p3) );
+}
+
+float A2Solution::getSmallestObstacleMag() {
+
+    if (this->m_close_point_joints.empty()) { return -1.0f; }
+
+    float smallestDist = 9999;
+
+    for (int i=0; i<this->m_close_point_joints.size(); ++i) {
+        QVector2D obsPos = this->obs_close_point[i]->m_center;
+        QVector2D pointPos = *this->pos_close_points[i];
+
+        float dist = (obsPos - pointPos).length();
+        if (dist <= smallestDist) { smallestDist = dist; }
+    }
+
+    return smallestDist;
+}
+
+VectorXf A2Solution::createErrorVecForObs(std::vector<Joint2D*>& obsJoints, std::vector<QVector2D*>& posObsPoints) {
+    int numLocked = obsJoints.size();
+    int numRows = 2 * numLocked;
+
+    VectorXf errorVec(numRows);
+
+    for (int row=0; row<numRows; row=row+2) {
+        int currIndex = row/2;
+        Joint2D* current = obsJoints[currIndex];
+
+        // the root can be ignored
+        if (this->isRoot(*current)) {
+            errorVec(row) = 0;
+            errorVec(row+1) = 0;
+        } else {
+            Vector3f currMath = this->qtToEigenMath(*posObsPoints[currIndex]);
+            Obstacle2D* obsToAvoid = this->obs_close_point[currIndex];
+            Vector3f obsMath = this->qtToEigenMath(obsToAvoid->m_center);
+
+            Vector3f awayFromObs = -1*(obsMath-currMath);
+            float mag = awayFromObs.norm();
+            awayFromObs.normalize(); // TODO: says to do this on paper but unsure
+//            awayFromObs = awayFromObs * (1.0f / mag);
+            errorVec(row) = awayFromObs.x();
+            errorVec(row+1) = awayFromObs.y();
+        }
+    }
+
+    return errorVec;
 }
 
 void A2Solution::setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<QVector2D>& posAllJoints, std::vector<Obstacle2D*>& obstacles, float effectRadAdd) {
@@ -96,7 +218,7 @@ void A2Solution::setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<
         Obstacle2D* obs = obstacles[iO];
         bool obsClosestPointSet = false;
         float currClosestDistance = 9999999;
-        float areaEff = obs->m_radius + effectRadAdd;
+        float areaEff = effectRadAdd;
 
         for (int iJ=0; iJ<posAllJoints.size(); ++iJ) {
             Joint2D* joint = allJoints[iJ];
@@ -108,13 +230,13 @@ void A2Solution::setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<
             if (distance <= areaEff && distance < currClosestDistance) {
                 if (obsClosestPointSet) {
                     this->m_close_point_joints.back() = joint;
-                    this->pos_close_points.back() = jPos;
+                    this->pos_close_points.back() = &jPos;
                     this->obs_close_point.back() = obs;
                     currClosestDistance = distance;
 
                 } else {
                     this->m_close_point_joints.push_back(joint);
-                    this->pos_close_points.push_back(jPos);
+                    this->pos_close_points.push_back(&jPos);
                     this->obs_close_point.push_back(obs);
                     currClosestDistance = distance;
                     obsClosestPointSet = true;
@@ -135,13 +257,13 @@ void A2Solution::setClosestPoints(std::vector<Joint2D*>& allJoints, std::vector<
             if (distFromLine <= areaEff && distFromLine < currClosestDistance) {
                 if (obsClosestPointSet) {
                     this->m_close_point_joints.back() = joint;
-                    this->pos_close_points.back() = *closestPointToObs;
+                    this->pos_close_points.back() = closestPointToObs;
                     this->obs_close_point.back() = obs;
                     currClosestDistance = distFromLine;
 
                 } else {
                     this->m_close_point_joints.push_back(joint);
-                    this->pos_close_points.push_back(*closestPointToObs);
+                    this->pos_close_points.push_back(closestPointToObs);
                     this->obs_close_point.push_back(obs);
                     currClosestDistance = distFromLine;
                     obsClosestPointSet = true;
@@ -321,14 +443,20 @@ void A2Solution::rotateJointByNoUpdate(std::vector<Joint2D*>& allJoints, std::ve
     }
 }
 
-VectorXf A2Solution::doDls(MatrixXf j, VectorXf e, float lambda) {
+VectorXf A2Solution::getDeltaThetaMatrix(MatrixXf j, VectorXf e, float lambda) {
+    MatrixXf dls = this->dls(j, lambda);
+    return dls*e;
+}
+
+MatrixXf A2Solution::dls(MatrixXf j, float lambda) {
     MatrixXf jT = j.transpose();
     MatrixXf i = MatrixXf::Identity(j.rows(), j.rows());
     float lamSq = lambda*lambda;
 
     MatrixXf dls = jT * (j*jT + lamSq*i).inverse();
-    return dls*e;
+    return dls;
 }
+
 
 VectorXf A2Solution::createErrorVec(std::vector<Joint2D*>& lockedJoints, std::vector<QVector2D*>& posLockedJoints, Joint2D& selected, QVector2D& expectedPos) {
     int numLocked = lockedJoints.size();
