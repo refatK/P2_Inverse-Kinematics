@@ -50,11 +50,11 @@ private:
     bool doRot = false;
 
     // CONSTANTS
-    float epsilon = 0; // tried 1
+    float epsilon = 1; // tried 1
     float lambda = 40; // ballpark is 5-50
     float beta = 0.01; // idk 0.01 seemed to work
     int maxIterations = 100;
-    float inRangeMag = 0.5; // 0.1 looks pretty good
+    float inRangeMag = 0.1; // 0.1 looks pretty good
 
     float areaEffectRadius = 150;
     float dUg = 115;

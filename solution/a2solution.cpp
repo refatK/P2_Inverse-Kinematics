@@ -47,8 +47,6 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 
     bool isCollide = false;
 
-
-//    for (int i=0; i<1; ++i) {
     for (int i=0; i<this->maxIterations; ++i) {
 
         isCollide = false;
@@ -71,8 +69,6 @@ void A2Solution::update(Joint2D* selected, QVector2D mouse_pos){
 //        errorVectorObs = this->beta * errorVectorObs;
 
         // do DLS
-//        deltaTheta = this->getDeltaThetaMatrix(jacobian, errorVector, this->lambda);
-
         float lamE = this->lambda;
         float lam2 = 20; // try diff stuff
         float aNmax = 1;
@@ -204,7 +200,6 @@ VectorXf A2Solution::createErrorVecForObs(std::vector<Joint2D*>& obsJoints, std:
             Vector3f awayFromObs = -1*(obsMath-currMath);
             float mag = awayFromObs.norm();
             awayFromObs.normalize(); // TODO: says to do this on paper but unsure
-//            awayFromObs = awayFromObs * (1.0f / mag);
             errorVec(row) = awayFromObs.x();
             errorVec(row+1) = awayFromObs.y();
         }
@@ -307,7 +302,7 @@ QVector2D* A2Solution::closestLinePointToObs(Obstacle2D* obs, QVector2D j1Pos, Q
     float distOfClosePointFromJ1 = QVector2D::dotProduct(vecToObsFromJ1, dir);
     QVector2D posOfPoint = j1Pos + (distOfClosePointFromJ1 * dir);
 
-    QVector2D* ptrPosOfPoint = new QVector2D(posOfPoint.x(), posOfPoint.y());    // check this isnt broken might be
+    QVector2D* ptrPosOfPoint = new QVector2D(posOfPoint.x(), posOfPoint.y());
     return ptrPosOfPoint;
 }
 
@@ -431,11 +426,6 @@ void A2Solution::rotateJointByNoUpdate(std::vector<Joint2D*>& allJoints, std::ve
 
     // Officially update the position
     posAllJoints[currIndex] = posAllJoints[parentIndex] + newQtVecFromParent;
-
-//    for (Joint2D* child : allJoints[currIndex]->get_children()) {
-//        QVector2D mathVecFromJoint = this->qtToMathCoords(child->get_position() - posBeforeUpdate);
-//        rotateJointBy(*child, mathVecFromJoint, theta);
-//    }
 
     for (int childIndex : this->getChildIndexes(allJoints, currIndex)) {
         QVector2D mathVecFromJoint = this->qtToMathCoords(posAllJoints[childIndex] - posBeforeUpdate);
@@ -654,7 +644,6 @@ void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
 
         this->doMov = true;
         this->movToMake = change;
-//        this->moveJointBy(joint, change);
 
     } else {
         // When non-root chosen, we rotate the selected the nodes and its children
@@ -666,7 +655,6 @@ void A2Solution::doFkPass(Joint2D& joint, QVector2D mouse_pos) {
 
         this->doRot = true;
         this->rotToMake = theta;
-//        this->rotateJointBy(joint, mathVecToJoint, theta);
     }
 }
 
