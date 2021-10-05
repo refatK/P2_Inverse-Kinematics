@@ -1,4 +1,6 @@
-# COMP477 A2 - Inverse Kinematics with Collision Detection and Avoidance
+[<-- View Related Projects](https://github.com/refatK/Computer-Animation-Assignments)
+
+# Inverse Kinematics with Collision Detection and Avoidance
 
 ![Project Sample Gif](https://user-images.githubusercontent.com/31963426/117588887-5df86200-b0f4-11eb-8f1a-3c62addedfc4.gif)
 
@@ -12,4 +14,4 @@ Since this is a Qt Creator Project, QT Creator IDE should be installed. Once the
 
 ##  View Implementation Work
 
-The project started with a given starter code, and the work done can be seen in [this PR](https://github.com/refatK/COMP477_A2_Inverse-Kinematics/pull/2).
+The project started with a given starter code, and the work done can be seen in [this PR](https://github.com/refatK/P2_Inverse-Kinematics/pull/2).
